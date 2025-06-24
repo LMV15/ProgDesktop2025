@@ -4,6 +4,8 @@
  */
 package progdesktop2025.view;
 
+import java.sql.SQLException;
+import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import progdesktop2025.controller.ProdutoController;
@@ -19,6 +21,7 @@ public class ProdutoView extends javax.swing.JFrame {
     private final String VALUEINDEX = "ID";
     private boolean estadoSelecionar;
     private int linhaAtual;
+    private ProdutoController produtoController;
 
     /**
      * Creates new form ProdutoView
@@ -28,6 +31,7 @@ public class ProdutoView extends javax.swing.JFrame {
         this.selecionarToggle(true);
         this.estadoSelecionar = false;
         this.ativarSalvarDeletar(this.estadoSelecionar);
+        this.produtoController = new ProdutoController();
     }
 
     /**
@@ -227,7 +231,6 @@ public class ProdutoView extends javax.swing.JFrame {
     //String cpf = model.getValueAt(row, 1);
     //}
     //}
-    
     private int procurarValor(int valor) {
         DefaultTableModel jTableModel = (DefaultTableModel) jTable.getModel();
 
@@ -307,15 +310,14 @@ public class ProdutoView extends javax.swing.JFrame {
         if (nome.trim().equals("")) {
             return;
         }
-        
+
         if (preco.trim().equals("")) {
             return;
         }
-        
+
         Double valorPreco = Util.tryParseDouble(preco.trim());
-        
+
         // #TODO valor preço 0
-        
         if (valorPreco == null) {
             this.fieldPreco.setText("Preço inválido!");
             return;
@@ -323,7 +325,7 @@ public class ProdutoView extends javax.swing.JFrame {
 
         DefaultTableModel jTableModel = (DefaultTableModel) jTable.getModel();
 
-        int id = ProdutoController.criarID(jTableModel);
+        int id = produtoController.criarID(jTableModel);
 
         Object[] data = {
             nome,
@@ -343,24 +345,23 @@ public class ProdutoView extends javax.swing.JFrame {
 
         String nome = this.fieldNome.getText();
         String preco = this.fieldPreco.getText();
-        
+
         this.ativarSalvarDeletar(false);
         this.limparSelecionar();
         jTable.clearSelection();
         this.limparFields();
-        
+
         if (nome.trim().equals("")) {
             return;
         }
-        
+
         if (preco.trim().equals("")) {
             return;
         }
-        
+
         Double valorPreco = Util.tryParseDouble(preco.trim());
-        
+
         // #TODO valor preço 0
-        
         if (valorPreco == null) {
             this.fieldPreco.setText("Preço inválido!");
             return;
@@ -370,25 +371,84 @@ public class ProdutoView extends javax.swing.JFrame {
             nome,
             preco
         };
-        
+
         jTableModel.setValueAt(data[0], this.linhaAtual, 0);
         jTableModel.setValueAt(data[1], this.linhaAtual, 1);
     }//GEN-LAST:event_jButtonSalvarMouseClicked
 
     private void jButtonImportarMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jButtonImportarMouseClicked
-        this.limparjTable();
-        TableModel model = ProdutoController.importar();
 
-        if (model == null) {
+        this.limparjTable();
+
+        try {
+            TableModel model = this.produtoController.importar();
+
+            if (model == null) {
+                return;
+            }
+
+            jTable.setModel(model);
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Erro SQLException na importação: " + e.getMessage(),
+                    "Erro",
+                    JOptionPane.ERROR_MESSAGE
+            );
             return;
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Erro genérico na importação: " + e.getMessage(),
+                    "Erro",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
+
         }
 
-        jTable.setModel(model);
+        JOptionPane.showMessageDialog(
+                this,
+                "Sucesso na importação! Os dados foram inseridos do banco de dados.",
+                "Sucesso",
+                JOptionPane.INFORMATION_MESSAGE
+        );
     }//GEN-LAST:event_jButtonImportarMouseClicked
 
     private void jButtonExportarMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jButtonExportarMouseClicked
         TableModel model = jTable.getModel();
-        ProdutoController.exportar(model);
+
+        try {
+            this.produtoController.exportar(model);
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Erro SQLException na exportação: " + e.getMessage(),
+                    "Erro",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Erro genérico na exportação: " + e.getMessage(),
+                    "Erro",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
+
+        }
+
+        JOptionPane.showMessageDialog(
+                this,
+                "Sucesso na exportação! Os dados foram salvos no banco de dados.",
+                "Sucesso",
+                JOptionPane.INFORMATION_MESSAGE
+        );
     }//GEN-LAST:event_jButtonExportarMouseClicked
 
     private void jButtonSelecionarMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jButtonSelecionarMouseClicked
@@ -408,13 +468,12 @@ public class ProdutoView extends javax.swing.JFrame {
             this.fieldSelecionar.setText(informe);
             return;
         }
-        
-        // #TODO testar preço!
 
+        // #TODO testar preço!
         DefaultTableModel jTableModel = (DefaultTableModel) jTable.getModel();
 
         Integer valorVerificar = Util.tryParseInt(Util.removeDotsSpaces(selecionar.trim()));
-        
+
         if (valorVerificar == null) {
             this.limparSelecionar();
             jTable.clearSelection();
