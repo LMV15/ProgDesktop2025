@@ -4,6 +4,8 @@
  */
 package progdesktop2025.view;
 
+import java.sql.SQLException;
+import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import progdesktop2025.controller.FuncionarioController;
@@ -19,6 +21,7 @@ public class FuncionarioView extends javax.swing.JFrame {
     private final String VALUEINDEX = "ID";
     private boolean estadoSelecionar;
     private int linhaAtual;
+    private FuncionarioController funcionarioController;
 
     /**
      * Creates new form FuncionarioView
@@ -29,6 +32,7 @@ public class FuncionarioView extends javax.swing.JFrame {
         this.selecionarToggle(true);
         this.estadoSelecionar = false;
         this.ativarSalvarDeletar(this.estadoSelecionar);
+        this.funcionarioController = new FuncionarioController();
     }
 
     /**
@@ -314,7 +318,7 @@ public class FuncionarioView extends javax.swing.JFrame {
 
         DefaultTableModel jTableModel = (DefaultTableModel) jTable.getModel();
 
-        int id = FuncionarioController.criarID(jTableModel);
+        int id = this.funcionarioController.criarID(jTableModel);
 
         Object[] data = {
             nome,
@@ -350,19 +354,78 @@ public class FuncionarioView extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonSalvarMouseClicked
 
     private void jButtonImportarMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jButtonImportarMouseClicked
+        
         this.limparjTable();
-        TableModel model = FuncionarioController.importar();
 
-        if (model == null) {
+        try {
+            TableModel model = this.funcionarioController.importar();
+
+            if (model == null) {
+                return;
+            }
+
+            jTable.setModel(model);
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Erro SQLException na importação: " + e.getMessage(),
+                    "Erro",
+                    JOptionPane.ERROR_MESSAGE
+            );
             return;
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Erro genérico na importação: " + e.getMessage(),
+                    "Erro",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
+
         }
 
-        jTable.setModel(model);
+        JOptionPane.showMessageDialog(
+                this,
+                "Sucesso na importação! Os dados foram inseridos do banco de dados.",
+                "Sucesso",
+                JOptionPane.INFORMATION_MESSAGE
+        );
     }//GEN-LAST:event_jButtonImportarMouseClicked
 
     private void jButtonExportarMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jButtonExportarMouseClicked
         TableModel model = jTable.getModel();
-        FuncionarioController.exportar(model);
+
+        try {
+            this.funcionarioController.exportar(model);
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Erro SQLException na exportação: " + e.getMessage(),
+                    "Erro",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Erro genérico na exportação: " + e.getMessage(),
+                    "Erro",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
+
+        }
+
+        JOptionPane.showMessageDialog(
+                this,
+                "Sucesso na exportação! Os dados foram salvos no banco de dados.",
+                "Sucesso",
+                JOptionPane.INFORMATION_MESSAGE
+        );
     }//GEN-LAST:event_jButtonExportarMouseClicked
 
     private void jButtonSelecionarMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jButtonSelecionarMouseClicked

@@ -4,18 +4,9 @@
  */
 package progdesktop2025.controller;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.util.ArrayList;
-import javax.swing.JFileChooser;
-import javax.swing.JOptionPane;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableModel;
+import javax.swing.table.*;
+import java.sql.*;
+import java.util.List;
 import progdesktop2025.model.FuncionarioModel;
 import util.Util;
 
@@ -23,9 +14,80 @@ import util.Util;
  *
  * @author jogos
  */
-public class FuncionarioController {
+public class FuncionarioController extends ControllerBase<FuncionarioModel> {
 
-    public static int criarID(TableModel model) {
+    @Override
+    protected String getTableName() {
+        return "funcionarios";
+    }
+
+    @Override
+    protected String getCreateTableSql() {
+        return "CREATE TABLE IF NOT EXISTS funcionarios ("
+                + "nome TEXT NOT NULL, "
+                + "cpf TEXT NOT NULL UNIQUE, "
+                + "id INTEGER NOT NULL UNIQUE PRIMARY KEY"
+                + ")";
+    }
+
+    @Override
+    protected String getInsertSql() {
+        return "INSERT INTO funcionarios (nome, cpf, id) VALUES (?, ?, ?)";
+    }
+
+    @Override
+    protected void setInsertParameters(
+            PreparedStatement preparedStatement,
+            FuncionarioModel funcionario
+    ) throws SQLException {
+        preparedStatement.setString(1, funcionario.getNome());
+        preparedStatement.setString(2, funcionario.getCpf());
+        preparedStatement.setInt(3, funcionario.getId());
+    }
+
+    @Override
+    protected FuncionarioModel mapTableRowToData(TableModel model, int row) {
+        String nome = (String) model.getValueAt(row, 0);
+        String cpf = (String) model.getValueAt(row, 1);
+        int id = (Integer) model.getValueAt(row, 2);
+
+        return new FuncionarioModel(nome, cpf, id);
+    }
+
+    @Override
+    protected FuncionarioModel mapResultSetToData(ResultSet resultSet) throws SQLException {
+        FuncionarioModel funcionario = new FuncionarioModel();
+        funcionario.setNome(resultSet.getString("nome"));
+        funcionario.setCpf(resultSet.getString("cpf"));
+        funcionario.setId(resultSet.getInt("id"));
+        
+        return funcionario;
+    }
+
+    @Override
+    protected TableModel createTableModel(List<FuncionarioModel> lista) {
+        String[] columnNames = {
+            "Nome",
+            "Cpf",
+            "ID"
+        };
+
+        DefaultTableModel model = new DefaultTableModel(columnNames, 0);
+
+        for (FuncionarioModel funcionario : lista) {
+            model.addRow(new Object[]{
+                funcionario.getNome(),
+                funcionario.getCpf(),
+                funcionario.getId()
+            });
+        }
+
+        return model;
+    }
+    
+    public int criarID(
+            TableModel model
+    ) {
         int max = 0;
 
         for (int row = 0; row < model.getRowCount(); row++) {
@@ -39,128 +101,7 @@ public class FuncionarioController {
 
             max = Math.max(value, max);
         }
-
+        
         return max + 1;
-    }
-
-    public static TableModel importar() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Importar");
-
-        if (fileChooser.showOpenDialog(null) != JFileChooser.APPROVE_OPTION) {
-            return null;
-        }
-
-        File file = fileChooser.getSelectedFile();
-
-        ArrayList<FuncionarioModel> lista = null;
-
-        try (ObjectInputStream ois = new ObjectInputStream(
-                new FileInputStream(file))) {
-
-            Object obj = ois.readObject();
-
-            lista = (ArrayList<FuncionarioModel>) obj;
-
-            if (lista == null) {
-                return null;
-            }
-
-            DefaultTableModel model = new DefaultTableModel();
-            model.addColumn("Nome");
-            model.addColumn("Cpf");
-            model.addColumn("ID");
-
-            for (FuncionarioModel funcionario : lista) {
-                model.addRow(new Object[]{
-                    funcionario.getNome(),
-                    funcionario.getCpf(),
-                    funcionario.getId()
-                });
-            }
-
-            return model;
-
-        } catch (FileNotFoundException e) {
-            JOptionPane.showMessageDialog(null,
-                    "Erro fazendo importação: " + e.getMessage(),
-                    "FileNotFoundException",
-                    JOptionPane.ERROR_MESSAGE);
-
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(null,
-                    "Erro fazendo importação: " + e.getMessage(),
-                    "IOException",
-                    JOptionPane.ERROR_MESSAGE);
-        } catch (ClassNotFoundException e) {
-            JOptionPane.showMessageDialog(null,
-                    "Erro fazendo importação: " + e.getMessage(),
-                    "ClassNotFoundException",
-                    JOptionPane.ERROR_MESSAGE);
-        } catch (ClassCastException e) {
-            JOptionPane.showMessageDialog(null,
-                    "Erro fazendo importação: " + e.getMessage(),
-                    "ClassCastException",
-                    JOptionPane.ERROR_MESSAGE);
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(null,
-                    "Erro fazendo importação: " + e.getMessage(),
-                    "Exception",
-                    JOptionPane.ERROR_MESSAGE);
-        }
-
-        return null;
-    }
-
-    public static void exportar(TableModel model) {
-        ArrayList<FuncionarioModel> lista = new ArrayList<>();
-
-        for (int row = 0; row < model.getRowCount(); row++) {
-            FuncionarioModel funcionario = new FuncionarioModel(
-                    model.getValueAt(row, 0).toString(),
-                    model.getValueAt(row, 1).toString(),
-                    (int) Util.tryParseInt(
-                            model.getValueAt(row, 2).toString().trim()
-                    )
-            );
-
-            lista.add(funcionario);
-        }
-
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Exportar");
-
-        // default
-        fileChooser.setSelectedFile(new File("employeeData.bin"));
-
-        int userSelection = fileChooser.showSaveDialog(null);
-
-        if (userSelection != JFileChooser.APPROVE_OPTION) {
-            return;
-        }
-
-        File fileToSave = fileChooser.getSelectedFile();
-
-        ObjectOutputStream oos = null;
-
-        try {
-            FileOutputStream fos = new FileOutputStream(fileToSave);
-            oos = new ObjectOutputStream(fos);
-        } catch (IOException ex) {
-            JOptionPane.showMessageDialog(null,
-                    "Erro fazendo exportação: " + ex.getMessage(),
-                    "Erro",
-                    JOptionPane.ERROR_MESSAGE);
-        }
-
-        try {
-            oos.writeObject(lista);
-            oos.flush();
-        } catch (IOException ex) {
-            JOptionPane.showMessageDialog(null,
-                    "Erro fazendo exportação: " + ex.getMessage(),
-                    "Erro",
-                    JOptionPane.ERROR_MESSAGE);
-        }
     }
 }
