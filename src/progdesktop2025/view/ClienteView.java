@@ -8,17 +8,21 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import progdesktop2025.controller.ClienteController;
 import util.Util;
+import java.sql.SQLException;
+import javax.swing.JOptionPane;
 
 /**
  *
  * @author jogos
  */
 public class ClienteView extends javax.swing.JFrame {
-    
+
     private final int SEARCHINDEX = 1; // CPF
     private final String VALUEINDEX = "CPF";
     private boolean estadoSelecionar;
     private int linhaAtual;
+
+    private ClienteController clienteController;
 
     /**
      * Creates new form ClienteView
@@ -29,6 +33,8 @@ public class ClienteView extends javax.swing.JFrame {
         this.selecionarToggle(true);
         this.estadoSelecionar = false;
         this.ativarSalvarDeletar(this.estadoSelecionar);
+
+        this.clienteController = new ClienteController();
     }
 
     /**
@@ -231,54 +237,54 @@ public class ClienteView extends javax.swing.JFrame {
     //}
     private int procurarValor(String valor) {
         DefaultTableModel jTableModel = (DefaultTableModel) jTable.getModel();
-        
+
         String valorBusca = Util.removeDotsSpaces(valor);
-        
+
         for (int linha = 0; linha < jTableModel.getRowCount(); linha++) {
-            
+
             String valorAtual = Util
                     .removeDotsSpaces(jTableModel
                             .getValueAt(linha, this.SEARCHINDEX)
                             .toString()
                     );
-            
+
             if (valorBusca.equalsIgnoreCase(valorAtual)) {
                 return linha;
             }
         }
-        
+
         return -1;
     }
-    
+
     private void ativarSalvarDeletar(boolean estado) {
         this.jButtonDeletar.setEnabled(estado);
         this.jButtonSalvar.setEnabled(estado);
         this.estadoSelecionar = estado;
     }
-    
+
     private void limparFields() {
         this.fieldNome.setText("");
         this.fieldCpf.setText("");
         //this.atualizacao();
     }
-    
+
     private void limparSelecionar() {
         this.fieldSelecionar.setText("");
     }
-    
+
     private void limparjTable() {
         DefaultTableModel jTableModel = (DefaultTableModel) jTable.getModel();
-        
+
         jTableModel.setRowCount(0);
 
         //atualizacao();
     }
-    
+
     private void selecionarToggle(boolean estado) {
         jTable.setRowSelectionAllowed(estado);
-        
+
         jTable.setColumnSelectionAllowed(estado);
-        
+
         jTable.setCellSelectionEnabled(estado);
     }
 
@@ -290,15 +296,15 @@ public class ClienteView extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonLimparMouseClicked
 
     private void jButtonDeletarMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jButtonDeletarMouseClicked
-        
+
         if (!this.estadoSelecionar) {
             return;
         }
-        
+
         DefaultTableModel jTableModel = (DefaultTableModel) jTable.getModel();
-        
+
         jTableModel.removeRow(this.linhaAtual);
-        
+
         this.limparSelecionar();
         this.limparFields();
         jTable.clearSelection();
@@ -309,40 +315,40 @@ public class ClienteView extends javax.swing.JFrame {
         //TableModel jTableModel = jTable.getModel();        
         String nome = this.fieldNome.getText();
         String cpf = this.fieldCpf.getText();
-        
+
         this.ativarSalvarDeletar(false);
         this.limparSelecionar();
         jTable.clearSelection();
         this.limparFields();
-        
+
         if (nome.trim().equals("")) {
             return;
         }
-        
+
         if (cpf.trim().equals("")) {
             return;
         }
-        
+
         DefaultTableModel jTableModel = (DefaultTableModel) jTable.getModel();
-        
+
         Object[] data = {
             nome, cpf
         };
-        
+
         jTableModel.addRow(data);
     }//GEN-LAST:event_jButtonNovoMouseClicked
 
     private void jButtonSalvarMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jButtonSalvarMouseClicked
-        
+
         if (!this.estadoSelecionar) {
             return;
         }
-        
+
         DefaultTableModel jTableModel = (DefaultTableModel) jTable.getModel();
-        
+
         String nome = this.fieldNome.getText();
         String cpf = this.fieldCpf.getText();
-        
+
         Object[] data = {
             nome,
             cpf
@@ -352,7 +358,7 @@ public class ClienteView extends javax.swing.JFrame {
         for (int col = 0; col < jTableModel.getColumnCount(); col++) {
             jTableModel.setValueAt(data[col], this.linhaAtual, col);
         }
-        
+
         this.limparSelecionar();
         jTable.clearSelection();
         this.limparFields();
@@ -360,31 +366,89 @@ public class ClienteView extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonSalvarMouseClicked
 
     private void jButtonImportarMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jButtonImportarMouseClicked
+
         this.limparjTable();
-        TableModel model = ClienteController.importar();
-        
-        if (model == null) {
+
+        try {
+            TableModel model = this.clienteController.importar();
+
+            if (model == null) {
+                return;
+            }
+
+            jTable.setModel(model);
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Erro SQLException na importação: " + e.getMessage(),
+                    "Erro",
+                    JOptionPane.ERROR_MESSAGE
+            );
             return;
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Erro genérico na importação: " + e.getMessage(),
+                    "Erro",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
+
         }
-        
-        jTable.setModel(model);
-        //this.atualizacao();
+
+        JOptionPane.showMessageDialog(
+                this,
+                "Sucesso na importação! Os dados foram inseridos do banco de dados.",
+                "Sucesso",
+                JOptionPane.INFORMATION_MESSAGE
+        );
     }//GEN-LAST:event_jButtonImportarMouseClicked
 
     private void jButtonExportarMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jButtonExportarMouseClicked
         TableModel model = jTable.getModel();
-        ClienteController.exportar(model);
+
+        try {
+            this.clienteController.exportar(model);
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Erro SQLException na exportação: " + e.getMessage(),
+                    "Erro",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Erro genérico na exportação: " + e.getMessage(),
+                    "Erro",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
+
+        }
+
+        JOptionPane.showMessageDialog(
+                this,
+                "Sucesso na exportação! Os dados foram salvos no banco de dados.",
+                "Sucesso",
+                JOptionPane.INFORMATION_MESSAGE
+        );
     }//GEN-LAST:event_jButtonExportarMouseClicked
 
     private void jButtonSelecionarMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jButtonSelecionarMouseClicked
-        
+
         this.ativarSalvarDeletar(false);
-        
+
         String selecionar = this.fieldSelecionar.getText().trim();
-        
+
         String informe = "Informe o " + this.VALUEINDEX + "!";
         String naoEncontrado = this.VALUEINDEX + " não encontrado!";
-        
+
         if (selecionar.equalsIgnoreCase("")
                 || selecionar.equalsIgnoreCase(informe)
                 || selecionar.equalsIgnoreCase(naoEncontrado)) {
@@ -394,11 +458,11 @@ public class ClienteView extends javax.swing.JFrame {
             this.fieldSelecionar.setText(informe);
             return;
         }
-        
+
         DefaultTableModel jTableModel = (DefaultTableModel) jTable.getModel();
-        
+
         int valor = this.procurarValor(selecionar);
-        
+
         if (valor == -1) {
             this.limparSelecionar();
             jTable.clearSelection();
@@ -410,13 +474,13 @@ public class ClienteView extends javax.swing.JFrame {
         // nao funciona
         //jTable.setRowSelectionInterval(valor, valor);
         jTable.scrollRectToVisible(jTable.getCellRect(valor, 0, true));
-        
+
         String nome = jTableModel.getValueAt(valor, 0).toString();
         String cpf = jTableModel.getValueAt(valor, 1).toString();
-        
+
         this.fieldNome.setText(nome);
         this.fieldCpf.setText(cpf);
-        
+
         this.ativarSalvarDeletar(true);
         this.linhaAtual = valor;
     }//GEN-LAST:event_jButtonSelecionarMouseClicked
